@@ -1,39 +1,64 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
+import { Route, Switch, Redirect } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
+import { useAuth } from "./_core/hooks/useAuth";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import NewAnalysis from "./pages/NewAnalysis";
+import AnalysisResult from "./pages/AnalysisResult";
+import History from "./pages/History";
+import AdminPanel from "./pages/AdminPanel";
+
+function ProtectedRoute({ component: Component, adminOnly = false }: { component: React.ComponentType; adminOnly?: boolean }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Redirect to="/login" />;
+  if (adminOnly && user.role !== "admin") return <Redirect to="/dashboard" />;
+  return <Component />;
+}
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
+      <Route path="/" component={Home} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/dashboard">
+        <ProtectedRoute component={Dashboard} />
+      </Route>
+      <Route path="/analysis/new">
+        <ProtectedRoute component={NewAnalysis} />
+      </Route>
+      <Route path="/analysis/:id">
+        <ProtectedRoute component={AnalysisResult} />
+      </Route>
+      <Route path="/history">
+        <ProtectedRoute component={History} />
+      </Route>
+      <Route path="/admin">
+        <ProtectedRoute component={AdminPanel} adminOnly />
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+      <ThemeProvider defaultTheme="dark">
+        <LanguageProvider>
+          <TooltipProvider>
+            <Toaster theme="dark" position="top-right" />
+            <Router />
+          </TooltipProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
